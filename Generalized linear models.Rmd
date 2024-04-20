@@ -1,0 +1,82 @@
+---
+title: "Generalized Linear Models (GLMs)"
+author: "Muturi"
+date: "2024-04-05"
+output: html_document
+---
+
+Generalized Linear Models (GLMs) are extensions of linear regression that accommodate scenarios where the assumptions of normality and homoskedasticity do not hold. GLMs are particularly useful when dealing with non-normal data or when modeling categorical outcomes. Our focus in this case will be logistic regression.
+
+#  Logistic Regression
+Logistic regression is used when the response variable is categorical and binary (e.g., yes/no, success/failure). It models the probability of the occurrence of a certain event by fitting a logistic curve to the data.
+
+
+
+  
+### Simple logistic Regression
+
+```{r,message=FALSE}
+library(tidyverse)
+library(janitor)
+# read data
+ideal_data <- read_csv("ideal3a.csv")%>%
+  clean_names()%>%
+  mutate(calf_sex=recode(calf_sex, "1"="Male", "2"="Female"))
+```
+The function `fct_relevel()` in R is used to reorder the levels of a factor variable. In your code, `fct_relevel(ideal_data$calf_sex, "Female")`, we are reordering the levels of the factor variable `ideal_data$calf_sex` so that "Female" becomes the reference level.
+When you fit a regression model with categorical variables, R automatically chooses one level of the categorical variable to be the reference level, against which it compares the other levels. By default, R often chooses the first level alphabetically. However, sometimes it's more meaningful to choose a different reference level.For example In this case, by using `fct_relevel()`, we are explicitly setting "Female" as the reference level for the variable `calf_sex`. This means that the coefficients or odds ratios we obtain from the logistic regression model will compare the other level of `calf_sex` (in this case, "Male") to the reference level "Female". 
+
+
+```{r }
+#prep data for model
+ideal_data$reasons_loss1 <- fct_relevel(ideal_data$reasons_loss1, "survived")
+ideal_data$calf_sex <- fct_relevel(ideal_data$calf_sex, "Female")
+ideal_data$distance_water <- fct_relevel(ideal_data$distance_water, "1-5 km")
+```
+
+**logistic regression model odds based on sex**
+```{r }
+
+ideal_glm_model <- glm(reasons_loss1~calf_sex, data=ideal_data, family="binomial")
+
+exp(cbind(OR=coef(ideal_glm_model),confint(ideal_glm_model)))
+
+```
+
+**findings**:
+- Calf sex had a significant association with the likelihood of death with male calves having 8 times higher odds of death than female calves (OR=8.38, 95% CI=3.26,28.53)
+
+**logistic regression model odds based on distance**
+```{r}
+ideal_glm_model <- glm(reasons_loss1~distance_water, data=ideal_data, family="binomial")
+
+exp(cbind(OR=coef(ideal_glm_model),confint(ideal_glm_model)))
+```
+
+**Results:**
+
+- Proximity to the water point also had a significant association with calves' likelihood of death. 
+
+-distance_water < 1 km: This category represents the odds ratio of death when the distance from water is less than 1 km. The OR of 0.25 suggests that, compared to the reference level (1-5 km), being within 1 km of water decreases the odds of death by approximately 75%.
+
+-distance_water At household: This category represents the odds ratio of death when the water source is at the household. The OR of 0.41 suggests that, compared to the reference level (1-5 km), having water at the household decreases the odds of death by approximately 59%.
+
+### Multiple Logistic Regression Model
+```{r}
+ideal_glm_model <- glm(reasons_loss1 ~ calf_sex + distance_water, data = ideal_data, family = "binomial")
+exp(cbind(OR = coef(ideal_glm_model), confint(ideal_glm_model)))
+
+```
+The logistic regression results suggest a significant association between calf death and both calf sex and distance to water. Here's how we can interpret the coefficients:
+
+
+- **calf_sexMale**: The odds ratio of 8.43 indicates that male calves have 8.43 times higher odds of death compared to female calves, holding the distance to water constant. The 95% CI suggests that this effect is statistically significant, with male calves having significantly higher odds of death.
+
+- **distance_water<1 km**: This coefficient represents the effect of being within 1 km of water on the odds of calf death compared to being farther away 
+( 1-5 km reference level). The odds ratio of 0.2446 suggests that being within 1 km of water decreases the odds of calf death by approximately 75.54% compared to being farther away, holding calf sex constant. The 95% CI indicates that this effect is statistically significant.
+
+- **distance_waterAt household**: This coefficient represents the effect of having water at the household on the odds of calf death compared to being farther away from water (1-5 km reference level). The odds ratio of 0.4382 suggests that having water at the household decreases the odds of calf death by approximately 56.18% compared to being farther away, holding calf sex constant. However, the 95% CI indicates that this effect is not statistically significant since the interval includes 1.
+
+In summary, the results indicate that both calf sex and distance to water are significant predictors of calf death. Male calves have significantly higher odds of death compared to female calves, and being closer to water sources, either within 1 km or at the household, significantly decreases the odds of calf death.
+
+
